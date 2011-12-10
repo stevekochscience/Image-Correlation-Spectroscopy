@@ -1,0 +1,605 @@
+<html xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   
+      <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      -->
+      <title>MATLAB ICS Tutorial</title>
+      <meta name="generator" content="MATLAB 7.0.1">
+      <meta name="date" content="2006-02-27">
+      <meta name="m-file" content="ICSTutorial"><style>
+body {
+  background-color: white;
+  margin:10px;
+}
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+pre.codeinput {
+  margin-left: 30px;
+}
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.showbuttons {
+  margin-left: 30px;
+  border: solid black 2px;
+  padding: 4px;
+  background: #EBEFF3;
+}
+
+pre.codeoutput {
+  color: gray;
+  font-style: italic;
+}
+pre.error {
+  color: red;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows.  On Gecko-based browsers, the shrink-to-fit doesn't work. */ 
+p,h1,h2,div {
+  /* for MATLAB's browser */
+  width: 600px;
+  /* for Mozilla, but the "width" tag overrides it anyway */
+  max-width: 600px;
+  /* for IE */
+  width:expression(document.body.clientWidth > 620 ? "600px": "auto" );
+}
+
+    </style></head>
+   <body>
+      <h1>MATLAB ICS Tutorial</h1>
+      <introduction>
+         <p>February 27, 2006</p>
+         <p>By David Kolin</p>
+      </introduction>
+      <h2>Contents</h2>
+      <div>
+         <ul>
+            <li><a href="#1">INTRODUCTION</a></li>
+            <li><a href="#2">SIMULATOR</a></li>
+            <li><a href="#4">SPATIAL ICS (ICS)</a></li>
+            <li><a href="#14">TEMPORAL ICS (TICS)</a></li>
+            <li><a href="#22">SPATIO-TEMPORAL ICS (STICS)</a></li>
+            <li><a href="#34">IMAGE SERIES IMPORTING AND MANIPULATION</a></li>
+            <li><a href="#35">REFERENCES</a></li>
+         </ul>
+      </div>
+      <h2>INTRODUCTION<a name="1"></a></h2>
+      <p>These notes are meant to serve as a very brief introduction to the accompanying MATLAB image correlation spectroscopy code.
+         They are not intended to be a comprehensive lesson on the underlying theory of ICS, or an introduction to MATLAB.  For those
+         details, see the references given at the end of this webpage.
+      </p>
+      <p>The MATLAB code in this tutorial is in a <tt>monospaced font</tt>.  It can simply be copied from this page to the command window.  All of the ICS .m files in the unzipped directory should
+         be added to the MATLAB path: File --&gt; Set Path... --&gt; Add with Subfolders...  You'll need the Optimization and Image Processing
+         Toolboxes to use all of the included .m files.
+      </p>
+      <p>Most of the included ICS .m files have a (small!) help section, which can be called by <tt>'help filename'</tt>.  All comments and suggestions are very much appreciated, and can be sent to <a href="mailto:david.kolin@gmail.com">david.kolin@gmail.com</a>.
+      </p>
+      <h2>SIMULATOR<a name="2"></a></h2>
+      <p>A simulation of fluorescently labeled particles imaged on a confocal microscope can be generated using simul8tr.m, which has
+         the following syntax:
+      </p>
+      <p><tt>simulation = simul8tr(sizeX,sizeY,sizeT,density,bleachType,bleachDecay,qYield,pixelsize,                        timesize,PSFType,PSFSize,PSFZ,noBits,diffCoeff,flowX,flowY,flowZ,
+                                   countingNoise,backgroundNoise);</tt></p>
+      <p>where:</p>
+      <p><tt>sizeX</tt> and <tt>sizeY</tt> are the dimensions of the simulation, in pixels.
+      </p>
+      <p><tt>density</tt> is the particle density in particles per um^2.
+      </p>
+      <p><tt>bleachType</tt> determines if the fluorophores bleach, and is either <tt>'none'</tt> for no bleaching or <tt>'mono'</tt> for a monoexponential decay in average intensity.
+      </p>
+      <p><tt>bleachDecay</tt> determines how quickly particles bleach. It is the rate constant for the monoexponential bleaching, in the same units at
+         the time step (usually between 0 and 0.05, given 1 Hz imaging rate).
+      </p>
+      <p><tt>qYield</tt> is the quantum yield of the fluorophores (usually 1).
+      </p>
+      <p><tt>pixelsize</tt> is the size of a pixel, in um (usually ~0.1).
+      </p>
+      <p><tt>timesize</tt> is the time between frames, in seconds (usually ~1).
+      </p>
+      <p><tt>PSFType</tt> gives the shape of the point spread function of the imaging system. It is either <tt>'g'</tt> for a 2D Gaussian, or <tt>'a'</tt> for an airy disk.
+      </p>
+      <p><tt>PSFSize</tt> is the e^-2 radius, in um, for a Gaussian PSF, or the distance to the first zero of the airy disk, in um.
+      </p>
+      <p><tt>PSFZ</tt> is the size, in um, for the Z dimension of the PSF.  For 2D simulations, set this to 0.  The PSF in Z is always a Gaussian,
+         regardless of <tt>PSFType</tt>.
+      </p>
+      <p><tt>noBits</tt> is the number of bits used in the image normalization, imitating a A/D converter (usually 12).
+      </p>
+      <p><tt>diffCoeff</tt> is the diffusion coefficient, in um^2/s.
+      </p>
+      <p><tt>flowX</tt>, <tt>flowY</tt>, and <tt>flowZ</tt> are the flow speeds in each of the directions, in um/s.
+      </p>
+      <p><tt>countingNoise</tt> is the noise associated with the PMT amplification electronics (see the August 2005 Costantino BJ paper for details).  Usually
+         between 1 and 20.
+      </p>
+      <p><tt>backgroundNoise</tt> is the noise associated with spurious background counts (see the same paper).  Usually between 0 and 0.3.
+      </p>
+      <p>As an example, let's create a simulated image series with the following characteristics: 256 x 256 pixels with 100 images,
+         10 particles per um^2, 1 s per image, 0.1 um/pixel, particles with a quantum yield of 1, a Gaussian convolving function with
+         an e^-2 radius of 0.4 um, with particles diffusing at 0.01 um^2/s, and no noise
+      </p><pre class="codeinput">imageSeriesDiff = simul8tr(256,256,100,10,<span class="string">'none'</span>,0,1,0.1,1,<span class="string">'g'</span>,0.4,0,12,0.01,0,0,0,0,0);
+</pre><p>The first image in the series should look something like this:</p><pre class="codeinput">imagesc(imageSeriesDiff(:,:,1))
+axis <span class="string">image</span>
+colormap(gray)
+</pre><img vspace="5" hspace="5" src="ICSTutorial_01.png"> <h2>SPATIAL ICS (ICS)<a name="4"></a></h2>
+      <p>We can determine number densities and aggregation states using ICS.  First, we calculate a 2D spatial autocorrelation function
+         (SACF) for each image in the simulation which we created earlier:
+      </p><pre class="codeinput">ICS2DCorr = corrfunc(imageSeriesDiff);
+</pre><p>The SACF of an image should be a 2D Gaussian.  We can view the SACF for first image:</p><pre class="codeinput">s=surf(ICS2DCorr(:,:,1));
+axis <span class="string">tight</span>
+colormap(jet)
+xlabel(<span class="string">'\eta'</span>,<span class="string">'FontSize'</span>,12)
+ylabel(<span class="string">'\xi'</span>,<span class="string">'FontSize'</span>,12)
+zlabel(<span class="string">'r(\xi,\eta)'</span>,<span class="string">'FontSize'</span>,12)
+set(s,<span class="string">'LineStyle'</span>,<span class="string">'none'</span>)
+title(<span class="string">'Spatial Autocorrelation Function for First Image'</span>)
+</pre><img vspace="5" hspace="5" src="ICSTutorial_02.png"> <p>Next, we crop the stack of SACFs around the central peak, since the fitting algorithms work better when the noise at higher
+         spatial lags is removed.
+      </p><pre class="codeinput">ICS2DCorrCrop = autocrop(ICS2DCorr,12);
+</pre><p>As an example, let's look at the SACF of the first image to see how much was cropped:</p><pre class="codeinput">s=surf(ICS2DCorrCrop(:,:,1));
+axis <span class="string">tight</span>
+colormap(jet)
+xlabel(<span class="string">'\eta'</span>,<span class="string">'FontSize'</span>,12)
+ylabel(<span class="string">'\xi'</span>,<span class="string">'FontSize'</span>,12)
+zlabel(<span class="string">'r(\xi,\eta)'</span>,<span class="string">'FontSize'</span>,12)
+set(s,<span class="string">'LineStyle'</span>,<span class="string">'none'</span>)
+title(<span class="string">'Cropped Spatial Autocorrelation Function for First Image'</span>)
+</pre><img vspace="5" hspace="5" src="ICSTutorial_03.png"> <p>These cropped SACFs are fit to a 2D Gaussian:</p>
+      <p><img vspace="5" hspace="5" src="ICSTutorial_eq441477.png"> </p>
+      <p>which can be accomplished by:</p><pre class="codeinput">a  = gaussfit(ICS2DCorrCrop,<span class="string">'2d'</span>,0.1,<span class="string">'n'</span>);
+</pre><p>returing the fit parameters in <tt>a</tt>. Recall that 0.1 is the pixel size set in the simulation above, and the <tt>'n'</tt> refers to no whitenoise (there would be whitenoise with real data).  We can now plot the fitted Gaussian as well as the raw
+         correlation function for the first image:
+      </p><pre class="codeinput">plotgaussfit(a(1,1:6),ICS2DCorrCrop(:,:,1),0.1,<span class="string">'n'</span>)
+</pre><img vspace="5" hspace="5" src="ICSTutorial_04.png"> <p>Finally, we can calculate the average cluster density using the amplitudes of the fitted Gaussians:</p><pre class="codeinput">particlesPerBeamArea = 1/(mean(a(:,1)))
+beamArea = pi*mean(a(:,2))*mean(a(:,3))
+density = particlesPerBeamArea/beamArea
+</pre><pre class="codeoutput">particlesPerBeamArea =
+    4.9948
+beamArea =
+    0.5091
+density =
+    9.8104
+</pre><p><tt>density</tt> should be close to the 10 particles/um^2 which we set in the simulation.
+      </p>
+      <h2>TEMPORAL ICS (TICS)<a name="14"></a></h2>
+      <p>We can extract diffusion coefficients and flow rates using TICS.  First, we calculate the temporal autocorrelation function
+         (TACF) for our diffusion simulation, given 1 second time sampling
+      </p><pre class="codeinput">GtDiff = tics(imageSeriesDiff,1);
+</pre><p>For samples undergoing 2D diffusion, the TACF has the following analytical form:</p>
+      <p><img vspace="5" hspace="5" src="ICSTutorial_eq516464.png"> </p>
+      <p>Let's fit the first 20 lags of the temporal autocorrelation function to the 2D diffusion model</p><pre class="codeinput">diffCoeff = difffit(GtDiff(1:20,1),GtDiff(1:20,2));
+</pre><pre class="codeoutput">Optimization terminated: relative function value
+ changing by less than OPTIONS.TolFun.
+</pre><img vspace="5" hspace="5" src="ICSTutorial_05.png"> <p>The diffusion coefficient can be calculated from the fitted parameter in <tt>diffCoeff</tt> and the beam waist of the laser:
+      </p>
+      <p><img vspace="5" hspace="5" src="ICSTutorial_eq60534.png"> </p>
+      <p>Or, in MATLAB:</p><pre class="codeinput">w = mean(a(:,2))
+D = w^2/(4*diffCoeff(2))
+</pre><pre class="codeoutput">w =
+    0.4062
+D =
+    0.0107
+</pre><p>The beam radius, <tt>w</tt>, should be close to the set value, 0.4. The diffusion coefficient <tt>D</tt>, should be close to the set value 0.01.
+      </p>
+      <h2>SPATIO-TEMPORAL ICS (STICS)<a name="22"></a></h2>
+      <p>STICS measures the velocity of flowing particles.  Let's generates an image series with 5 particles/um^2 immobile, 5 particles/um^2
+         flowing with direction "down-left" i.e., x component 0.0707 um/s, y component -0.0707 um/s.  The pixel size will be 0.06 um,
+         and the time resolution 0.1 seconds.
+      </p>
+      <p>This gives a total speed of sqrt(2(0.0707^2)) = 0.1 um/s.</p><pre class="codeinput">imageSeriesFlow = simul8tr(256,256,100,[5 5],<span class="string">'none'</span>,[0 0],[1 1],0.06,0.1,<span class="string">'g'</span>,0.4,0,12,[0 0],[0.0707 0],[-0.0707 0],[0 0],0,0);
+</pre><p>The function <tt>velocity</tt> performs the STICS analysis:
+      </p><pre class="codeinput">[Vx,Vy] = velocity(imageSeriesFlow,0.1,0.06,<span class="string">'y'</span>,20,<span class="string">'n'</span>)
+</pre><pre class="codeoutput">Current plot held
+</pre><img vspace="5" hspace="5" src="ICSTutorial_06.png"> <p>where the analysis was performed up to lag 20, <tt>'y'</tt> denotes immobile filtering, with time resolution 0.1s and pixel size 0.06 um. <tt>'n'</tt> denotes no whitenoise (there would be with real data).  When prompted, select end of the "linear" region of the plot.  Because
+         this simulation has high S/N and temporal coherence, the plot should be linear over the range displayed.  Just click somewhere
+         on the right hand side (i.e., high tau) of the plot.  <tt>Vx</tt> and <tt>Vy</tt> will be calculated, and should agree with the set velocity components of 0.071 and -0.071.  The magnitude of the velocity
+         measured by STICS is given by <tt>V</tt>:
+      </p><pre class="codeinput">V = sqrt(Vx^2+Vy^2)
+</pre><pre class="codeoutput">V =
+    0.1052
+</pre><p><tt>V</tt> should be close to the set speed, 0.1um/s Let's compare this result with TICS.  As with diffusion, we calculate the TACF,
+         given 0.1 second temporal sampling:
+      </p><pre class="codeinput">GtFlow = tics(imageSeriesFlow,0.1);
+</pre><p>For samples undergoing 2D flow, the TACF has the following analytical form:</p>
+      <p><img vspace="5" hspace="5" src="ICSTutorial_eq530260.png"> </p>
+      <p>We can fit the first 60 lags of the simulation TACF to this model:</p><pre class="codeinput">flowCoeff = flowfit(GtFlow(1:60,1),GtFlow(1:60,2));
+</pre><img vspace="5" hspace="5" src="ICSTutorial_08.png"> <p>The flow speed can be calculated from this fit:</p>
+      <p><img vspace="5" hspace="5" src="ICSTutorial_eq89431.png"> </p>
+      <p>Or, in MATLAB:</p><pre class="codeinput">v = w/flowCoeff(2)
+</pre><pre class="codeoutput">v =
+    0.0977
+</pre><p><tt>v</tt> should be close to <tt>V</tt>, the speed recovered from the STICS analysis. Finally, we can calculate the % immobile:
+      </p><pre class="codeinput">percentImmobile = flowCoeff(3)/(flowCoeff(1)+flowCoeff(3))*100
+</pre><pre class="codeoutput">percentImmobile =
+   46.5158
+</pre><p><tt>percentImmobile</tt> should be close to 50, the value set in the simulation.
+      </p>
+      <h2>IMAGE SERIES IMPORTING AND MANIPULATION<a name="34"></a></h2>
+      <p><b>Importing Image Series</b></p>
+      <p>A 16-bit Fluoview TIFF image series can be imported using <tt>rd_img16</tt>:
+      </p>
+      <p><tt>image_data=rd_img16(filename)</tt>;
+      </p>
+      <p>where <tt>filename</tt> a string which contains the filename to load.  (e.g., <tt>'C:\MyData\ImageSeries.tif'</tt>.)  Similary, <tt>rd_imgser</tt> can load 8-bit RAW files:
+      </p>
+      <p><tt>image_data=rd_imgser(filename,sizex,sizey,numimg)</tt>;
+      </p>
+      <p>where <tt>sizex</tt> and <tt>sizey</tt> are the dimensions of an image, and <tt>numimg</tt> is the number of images in the series.
+      </p>
+      <p>If the file is a Fluoview TIFF and the image series was collected on an Olympus microscope, <tt>FluoInfo</tt> can extract data collection parameters from the file header:
+      </p>
+      <p><tt>[XDim,YDim,TDim, PMTVoltage, PMTOffset, PMTGain, LaserPower] = FluoInfo(filename);</tt></p>
+      <p>where <tt>XDim</tt> and <tt>YDim</tt> are the pixel sizes, in um, in the X and Y directions, and <tt>TDim</tt> is the time between images, in seconds.  <tt>PMTVoltage</tt>, <tt>PMTOffset</tt>, and <tt>PMTGain</tt>, give the PMT settings, and <tt>LaserPower</tt> is the laser intensity, in percent.
+      </p>
+      <p><b>Correcting for Background Noise</b></p>
+      <p>Background intensity counts can be subtracted from an image series using <tt>wnCorr</tt>:
+      </p>
+      <p><tt>imageSeriesCorrected = wnCorr(imageSeries);</tt></p>
+      <p>You will be prompted to select a background region.  Its mean will be subtracted from the image series.</p>
+      <p><b>Cropping a Region for Analysis</b></p>
+      <p>An image series can be cropped to select a region of interest using <tt>serimcrop</tt>:
+      </p>
+      <p><tt>croppedImageSeries = serimcrop(imageSeries);</tt></p>
+      <p>You will be prompted to interactively select the region of interest.</p>
+      <h2>REFERENCES<a name="35"></a></h2>
+      <p><b>Image correlation Spectroscopy (ICS)</b></p>
+      <p>[1] Petersen, N., P. Hoddelius, P. Wiseman, O. Seger, and K. Magnusson. 1993. Quantitation of membrane receptor distributions
+         by image correlation spectroscopy: concept and application. Biophys. J. 65:1135-46. <a href="http://www.biophysj.org/cgi/content/abstract/65/3/1135">http://www.biophysj.org/cgi/content/abstract/65/3/1135</a></p>
+      <p>[2] Wiseman, P., and N. Petersen. 1999. Image correlation spectroscopy. II. optimization for ultrasensitive detection of preexisting
+         platelet-derived growth factor-beta receptor oligomers on intact cells. Biophys. J. 76:963-77. <a href="http://www.biophysj.org/cgi/content/abstract/76/2/963">http://www.biophysj.org/cgi/content/abstract/76/2/963</a></p>
+      <p>[3] Costantino, S., J. W. Comeau, D. L. Kolin, and P. W. Wiseman. 2005. Accuracy and dynamic range of spatial image correlation
+         and cross-correlation spectroscopy. Biophys. J. 89:1251-1260. <a href="http://www.biophysj.org/cgi/content/abstract/89/2/1251">http://www.biophysj.org/cgi/content/abstract/89/2/1251</a></p>
+      <p><b>Temporal Image Correlation Spectroscopy (TICS)</b></p>
+      <p>[4] Wiseman, P., J. Squier, M. Ellisman, and K. Wilson. 2000. Two-photon image correlation spectroscopy and image cross-correlation
+         spectroscopy. J. Microsc. 200:14-25. <a href="http://www.blackwell-synergy.com/doi/abs/10.1046/j.1365-2818.2000.00736.x">http://www.blackwell-synergy.com/doi/abs/10.1046/j.1365-2818.2000.00736.x</a> and correction: <a href="http://www.blackwell-synergy.com/doi/full/10.1046/j.0022-2720.2001.001013.x">http://www.blackwell-synergy.com/doi/full/10.1046/j.0022-2720.2001.001013.x</a></p>
+      <p>[5] Kolin, D. L., S. Costantino, and P. W. Wiseman. 2006. Sampling Effects, Noise, and Photobleaching in Temporal Image Correlation
+         Spectroscopy. Biophys. J. 90:628-639. <a href="http://www.biophysj.org/cgi/content/abstract/90/2/628">http://www.biophysj.org/cgi/content/abstract/90/2/628</a></p>
+      <p><b>Spatio-temporal Image Correlation Spectroscopy (STICS)</b></p>
+      <p>[6] Hebert, B., S. Costantino, and P. W. Wiseman. 2005. Spatiotemporal image correlation spectroscopy (STICS) theory, verification,
+         and application to protein velocity mapping in living CHO cells. Biophys. J. 88:3601-3614. <a href="http://www.biophysj.org/cgi/content/abstract/88/5/3601">http://www.biophysj.org/cgi/content/abstract/88/5/3601</a></p>
+      <p><b>MATLAB Documentation</b></p>
+      <p>Getting started in MATLAB: <a href="http://www.mathworks.com/access/helpdesk/help/techdoc/learn_matlab/learn_matlab.html">http://www.mathworks.com/access/helpdesk/help/techdoc/learn_matlab/learn_matlab.html</a></p>
+      <p class="footer"><br>
+         Published with MATLAB&reg; 7.0.1<br></p>
+      <!--
+##### SOURCE BEGIN #####
+%% MATLAB ICS Tutorial
+% February 27, 2006
+%
+% By David Kolin
+
+%% INTRODUCTION
+% These notes are meant to serve as a very brief introduction to the accompanying MATLAB
+% image correlation spectroscopy code.  They are not intended to be a
+% comprehensive lesson on the underlying theory of ICS, or an introduction to MATLAB.  For those details, see
+% the references given at the end of this webpage.
+%
+% The MATLAB code in this tutorial is in a |monospaced font|.  It can
+% simply be copied from this page to the command window.  All of the
+% ICS .m files in the unzipped directory should be added to the MATLAB path: File REPLACE_WITH_DASH_DASH> Set
+% Path... REPLACE_WITH_DASH_DASH> Add with Subfolders...  You'll need the Optimization and
+% Image Processing Toolboxes to use all of the included .m files.
+%
+% Most of the included ICS .m files have a (small!) help section, which can be called by |'help
+% filename'|.  All comments and suggestions are very much appreciated, and can be sent to
+% david.kolin@gmail.com.
+
+%% SIMULATOR
+% A simulation of fluorescently labeled particles imaged on a confocal microscope
+% can be generated using simul8tr.m, which has the following syntax:
+%
+% |simulation = simul8tr(sizeX,sizeY,sizeT,density,bleachType,bleachDecay,qYield,pixelsize,
+%                        timesize,PSFType,PSFSize,PSFZ,noBits,diffCoeff,flowX,flowY,flowZ,
+%                        countingNoise,backgroundNoise);|
+%
+% where:
+%
+% |sizeX| and |sizeY| are the dimensions of the simulation, in pixels.
+%
+% |density| is the particle density in particles per um^2.
+%
+% |bleachType| determines if the fluorophores bleach, and is either
+% |'none'| for no bleaching or |'mono'| for a monoexponential decay in
+% average intensity.
+%
+% |bleachDecay| determines how quickly particles bleach. It is the rate constant
+% for the monoexponential bleaching, in the same units at the time step
+% (usually between 0 and 0.05, given 1 Hz imaging rate).
+%
+% |qYield| is the quantum yield of the fluorophores (usually 1).
+%
+% |pixelsize| is the size of a pixel, in um (usually ~0.1).
+%
+% |timesize| is the time between frames, in seconds (usually ~1).
+%
+% |PSFType| gives the shape of the point spread function of the imaging system.
+% It is either |'g'| for a 2D Gaussian, or |'a'| for an airy disk.
+%
+% |PSFSize| is the e^-2 radius, in um, for a Gaussian PSF, or the distance
+% to the first zero of the airy disk, in um.
+%
+% |PSFZ| is the size, in um, for the Z dimension of the PSF.  For
+% 2D simulations, set this to 0.  The PSF in Z is always a Gaussian,
+% regardless of |PSFType|.
+%
+% |noBits| is the number of bits used in the image normalization, imitating
+% a A/D converter (usually 12).
+%
+% |diffCoeff| is the diffusion coefficient, in um^2/s.
+%
+% |flowX|, |flowY|, and |flowZ| are the flow speeds in each of the
+% directions, in um/s.
+%
+% |countingNoise| is the noise associated with the PMT amplification
+% electronics (see the August 2005 Costantino BJ paper for details).  Usually between 1 and 20.
+%
+% |backgroundNoise| is the noise associated with spurious background counts
+% (see the same paper).  Usually between 0 and 0.3.
+%
+% As an example, let's create a simulated image series with the following characteristics:
+% 256 x 256 pixels with 100 images, 10 particles per um^2, 1 s per image,
+% 0.1 um/pixel, particles with a quantum yield of 1, a Gaussian convolving function
+% with an e^-2 radius of 0.4 um, with particles diffusing at 0.01 um^2/s, and no noise
+
+imageSeriesDiff = simul8tr(256,256,100,10,'none',0,1,0.1,1,'g',0.4,0,12,0.01,0,0,0,0,0);
+%%
+% The first image in the series should look something like this:
+
+imagesc(imageSeriesDiff(:,:,1))
+axis image
+colormap(gray)
+
+%% SPATIAL ICS (ICS)
+% We can determine number densities and aggregation states using ICS.  First, we calculate a
+% 2D spatial autocorrelation function (SACF) for each image in the simulation which we created earlier:
+
+ICS2DCorr = corrfunc(imageSeriesDiff);
+%%
+% The SACF of an image should be a 2D Gaussian.  We can view the SACF for first image:
+
+s=surf(ICS2DCorr(:,:,1));
+axis tight
+colormap(jet)
+xlabel('\eta','FontSize',12)
+ylabel('\xi','FontSize',12)
+zlabel('r(\xi,\eta)','FontSize',12)
+set(s,'LineStyle','none')
+title('Spatial Autocorrelation Function for First Image')
+%%
+% Next, we crop the stack of SACFs around the central peak, since the
+% fitting algorithms work better when the noise at higher spatial lags is
+% removed.
+
+ICS2DCorrCrop = autocrop(ICS2DCorr,12);
+%%
+% As an example, let's look at the SACF of the first image to see how much was cropped:
+
+s=surf(ICS2DCorrCrop(:,:,1));
+axis tight
+colormap(jet)
+xlabel('\eta','FontSize',12)
+ylabel('\xi','FontSize',12)
+zlabel('r(\xi,\eta)','FontSize',12)
+set(s,'LineStyle','none')
+title('Cropped Spatial Autocorrelation Function for First Image')
+
+%%
+% These cropped SACFs are fit to a 2D Gaussian:
+
+%%
+% 
+% $$r\left(\xi,\eta\right) \ = g\left(0,0\right)\ e^{ -\frac{\xi^{2}+\eta^{2}}{\omega_{o}^{2}}} + g_{\infty}$$
+%  
+
+%%
+% which can be accomplished by:
+a  = gaussfit(ICS2DCorrCrop,'2d',0.1,'n');
+
+%%
+% returing the fit parameters in |a|.
+% Recall that 0.1 is the pixel size set in the simulation above, and the |'n'| refers to no whitenoise
+% (there would be whitenoise with real data).  We can now plot
+% the fitted Gaussian as well as the raw correlation function for the first
+% image:
+
+plotgaussfit(a(1,1:6),ICS2DCorrCrop(:,:,1),0.1,'n')
+%%
+% Finally, we can calculate the average cluster density using the
+% amplitudes of the fitted Gaussians:
+
+particlesPerBeamArea = 1/(mean(a(:,1)))
+beamArea = pi*mean(a(:,2))*mean(a(:,3))
+density = particlesPerBeamArea/beamArea
+%%
+% |density| should be close to the 10 particles/um^2 which we set in the
+% simulation.
+
+%% TEMPORAL ICS (TICS)
+% We can extract diffusion coefficients and flow rates using TICS.  First,
+% we calculate
+% the temporal autocorrelation function (TACF) for our diffusion
+% simulation, given 1 second time sampling
+GtDiff = tics(imageSeriesDiff,1);
+%%
+% For samples undergoing 2D diffusion, the TACF has the following
+% analytical form:
+%%
+% 
+% $$ r \left( 0,0,\tau \right) \  = g \left(0,0,0\right) \ \left(1+ \frac{\tau}{\tau_{d}}\right)^{-1} + g_{\infty}$$
+% 
+%%
+% Let's fits the first 20 lags of the temporal autocorrelation function to
+% the 2D diffusion model
+diffCoeff = difffit(GtDiff(1:20,1),GtDiff(1:20,2));
+%%
+% The diffusion coefficient can be calculated from the fitted parameter in
+% |diffCoeff| and the beam waist of the laser:
+%%
+% 
+% $$D = \frac{\langle\omega_{0}\rangle^{2}}{4\tau_{d}}$$
+% 
+%%
+% Or, in MATLAB:
+w = mean(a(:,2))
+D = w^2/(4*diffCoeff(2))
+%%
+% The beam radius, |w|, should be close to the set value, 0.4.
+% The diffusion coefficient |D|, should be close to the set value 0.01.
+%% SPATIO-TEMPORAL ICS (STICS)
+% STICS measures the velocity of flowing particles.  Let's generates an image series with 5 particles/um^2 immobile, 5 particles/um^2 flowing with direction "down-left"
+% i.e., x component 0.0707 um/s, y component -0.0707 um/s.  The pixel size
+% will be 0.06, and the time resolution 0.1 seconds.
+%
+% This gives a total speed of sqrt(2(0.0707^2)) = 0.1 um/s.
+imageSeriesFlow = simul8tr(256,256,100,[5 5],'none',[0 0],[1 1],0.06,0.1,'g',0.4,0,12,[0 0],[0.0707 0],[-0.0707 0],[0 0],0,0);
+%%
+% The function |velocity| performs the STICS analysis:
+[Vx,Vy] = velocity(imageSeriesFlow,0.1,0.06,'y',20,'n');
+%%
+% where the analysis was performed up to lag 20, |'y'| denotes immobile
+% filtering, with time resolution 0.1s and pixel size 0.06 um.
+% |'n'| denotes no whitenoise (there would be with real data).  When
+% prompted, select end of the "linear" region of the plot.  Because this
+% simulation has high S/N and temporal coherence, the plot should be linear over the range displayed.  Just click somewhere on the right hand
+% side (i.e., high tau) of the plot.  |Vx| and
+% |Vy| will be calculated, and should agree with the set velocity components of 0.071 and -0.071.  The magnitude
+% of the velocity measured by STICS is given by |V|:
+V = sqrt(Vx^2+Vy^2)
+%%
+% |V| should be close to the set speed, 0.1um/s
+% Let's compare this result with TICS.  As with diffusion, we calculate
+% the TACF, given 0.1 second temporal sampling:
+GtFlow = tics(imageSeriesFlow,0.1);
+%%
+% For samples undergoing 2D flow, the TACF has the following analytical
+% form:
+%%
+% 
+% $$r \left(0,0,\tau \right) \ \ =g \left(0,0,0\right)\ \ e^{-\left(\frac{\tau}{\tau_{f}}\right)^{2}} + g_{\infty}.$$
+% 
+%%
+% We can fit the first 60 lags of the simulation TACF to this model:
+flowCoeff = flowfit(GtFlow(1:60,1),GtFlow(1:60,2));
+%%
+% The flow speed can be calculated from this fit:
+%%
+% 
+% $$\left|v\right| = \frac{\langle\omega_{0}\rangle}{\tau_{f}}$$
+% 
+%%
+% Or, in MATLAB:
+v = w/flowCoeff(2)
+%%
+% |v| should be close to |V|, the speed recovered from the STICS analysis. 
+% Finally, we can calculate the % immobile:
+percentImmobile = flowCoeff(3)/(flowCoeff(1)+flowCoeff(3))*100
+%%
+% |percentImmobile| should be close to 50, the value set in the simulation.
+
+%% IMAGE SERIES IMPORTING AND MANIPULATION
+%
+% *Importing Image Series*
+%
+% A 16-bit Fluoview TIFF image series can be imported using |rd_img16|:
+%
+% |image_data=rd_img16(filename)|;
+%
+% where |filename| a string which contains the filename to load.  (e.g.,
+% |'C:\MyData\ImageSeries.tif'|.)  Similary, |rd_imgser| can load 8-bit RAW files:
+%
+% |image_data=rd_imgser(filename,sizex,sizey,numimg)|;
+%
+% where |sizex| and |sizey| are the dimensions of an image, and |numimg| is
+% the number of images in the series.
+%
+% If the file is a Fluoview TIFF and the image series was collected on an Olympus
+% microscope, |FluoInfo| can extract data collection
+% parameters from the file header:
+%
+% |[XDim,YDim,TDim, PMTVoltage, PMTOffset, PMTGain, LaserPower] = FluoInfo(filename);|
+%
+% where |XDim| and |YDim| are the pixel sizes, in um, in the X and Y directions,
+% and |TDim| is the time between images, in seconds.  |PMTVoltage|,
+% |PMTOffset|, and |PMTGain|, give the PMT settings, and |LaserPower| is
+% the laser intensity, in percent.
+%
+% *Correcting for Background Noise*
+%
+% Background intensity counts can be subtracted from an image series using
+% |wnCorr|:
+%
+% |imageSeriesCorrected = wnCorr(imageSeries);|
+%
+% You will be prompted to select a background region.  Its mean will
+% be subtracted from the image series.
+%
+% *Cropping a Region for Analysis*
+%
+% An image series can be cropped to select a region of interest using
+% |serimcrop|:
+%
+% |croppedImageSeries = serimcrop(imageSeries);|
+%
+% You will be prompted to interactively select the region of interest.
+%% REFERENCES
+%
+% *Image correlation Spectroscopy (ICS)*
+%
+% [1] Petersen, N., P. Hoddelius, P. Wiseman, O. Seger, and K. Magnusson. 1993. Quantitation of
+% membrane receptor distributions by image correlation spectroscopy: concept and application.
+% Biophys. J. 65:1135-46. http://www.biophysj.org/cgi/content/abstract/65/3/1135
+%
+% [2] Wiseman, P., and N. Petersen. 1999. Image correlation spectroscopy. II. optimization for ultrasensitive
+% detection of preexisting platelet-derived growth factor-beta receptor oligomers on
+% intact cells. Biophys. J. 76:963-77. http://www.biophysj.org/cgi/content/abstract/76/2/963
+%
+% [3] Costantino, S., J. W. Comeau, D. L. Kolin, and P. W. Wiseman. 2005. Accuracy and dynamic
+% range of spatial image correlation and cross-correlation spectroscopy. Biophys. J. 89:1251-1260.
+% http://www.biophysj.org/cgi/content/abstract/89/2/1251
+%
+% *Temporal Image Correlation Spectroscopy (TICS)*
+%
+% [4] Wiseman, P., J. Squier, M. Ellisman, and K. Wilson. 2000. Two-photon image correlation
+% spectroscopy and image cross-correlation spectroscopy. J. Microsc. 200:14-25.
+% http://www.blackwell-synergy.com/doi/abs/10.1046/j.1365-2818.2000.00736.x
+% and correction: http://www.blackwell-synergy.com/doi/full/10.1046/j.0022-2720.2001.001013.x
+%
+% [5] Kolin, D. L., S. Costantino, and P. W. Wiseman. 2006. Sampling Effects, Noise, and Photobleaching
+% in Temporal Image Correlation Spectroscopy. Biophys. J. 90:628-639. http://www.biophysj.org/cgi/content/abstract/90/2/628
+%
+% *Spatio-temporal Image Correlation Spectroscopy (STICS)*
+%
+% [6] Hebert, B., S. Costantino, and P. W. Wiseman. 2005. Spatiotemporal image correlation spectroscopy
+% (STICS) theory, verification, and application to protein velocity mapping in living
+% CHO cells. Biophys. J. 88:3601-3614. http://www.biophysj.org/cgi/content/abstract/88/5/3601
+% 
+% *MATLAB Documentation*
+%
+% Getting started in MATLAB:
+% http://www.mathworks.com/access/helpdesk/help/techdoc/learn_matlab/learn_matlab.html
+##### SOURCE END #####
+-->
+   </body>
+</html>
