@@ -1,3 +1,8 @@
+December 9, 2011: Steve Koch: I downloaded this set of software from the Wiseman group website (http://wiseman-group.mcgill.ca/dkolin/ICSMATLAB%2028-02-06.zip) today.  With Dr. Wiseman's permission, I am hoping to have a student get this code working and to upload the project to github as open source.  According to Wiseman, as expected this code is out of date.  However, could be better than nothing and helpful as open source.
+
+Link to my notebook: https://docs.google.com/open?id=0BxLNnjMk2r_qNTE4M2MzY2YtNGU4ZC00NmM3LWI1NjgtMDllMzQ1YjNiMjBl
+
+Below here is the original README file:
 ICS Analysis v1.0
 February 26, 2006
 -----------------
